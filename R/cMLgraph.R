@@ -102,9 +102,9 @@ Graph_Estimate <- function(b_mat,se_mat,n_vec,rho_mat,IJ_snp_list,t,random_start
     for(j in (i+1):n_trait){
       ind_i_new = IJ_snp_list[[k]]$ind_i_new
       ind_j_new = IJ_snp_list[[k]]$ind_j_new
-### for perturbed data, need to select again! ###
-      ind_i_new = ind_i_new[abs(b_mat[ind_i_new,i]/se_mat[ind_i_new,i])>t]
-      ind_j_new = ind_j_new[abs(b_mat[ind_j_new,j]/se_mat[ind_j_new,j])>t]
+### for perturbed data, need to select again! ### (NOT USE)
+#      ind_i_new = ind_i_new[abs(b_mat[ind_i_new,i]/se_mat[ind_i_new,i])>t]
+#      ind_j_new = ind_j_new[abs(b_mat[ind_j_new,j]/se_mat[ind_j_new,j])>t]
 ###
       rho_ij = rho_mat[i,j]
       ItoJ_cML_O_res = mr_cML_O(b_exp=b_mat[ind_i_new,i],
@@ -217,53 +217,105 @@ Graph_summarize <- function(Graph_Perturb_list){
     return(out)
 }
 
-subset_Graph <- function(dp_list,keep_trait,alpha=1,check=TRUE){
-    keep_trait_id = is.element(dp_list$trait_vec,keep_trait)
-
-    new_obs_graph_list = lapply(dp_list$obs_graph_list,function(G) {alpha*G[keep_trait_id,keep_trait_id]})
-    new_dir_graph_list = lapply(new_obs_graph_list, function(G_obs) {G_obs %*% solve(diag(nrow(G_obs))+G_obs)})
-    max_eigen_list = lapply(new_dir_graph_list, function(G_dir) {max(abs(eigen(G_dir)$values))})
-    rm_dp_id = which(unlist(max_eigen_list)>1)
-    if(check & length(rm_dp_id)>0){
-        new_dir_graph_list = new_dir_graph_list[-rm_dp_id]
+subset_Graph_d1 <- function(dp_list,keep_trait,B=2000,check=TRUE,show=TRUE,maxit=10000){
+  set.seed(721)
+  keep_trait_id = is.element(dp_list$trait_vec,keep_trait)
+  BW_id = which(dp_list$trait_vec[keep_trait_id]=='BW')
+  
+  warning=warn_len=NULL
+  B_list = sample(1:length(dp_list$obs_graph_list),B,replace = FALSE)
+  total_B = length(dp_list$obs_graph_list)
+  new_obs_graph_list = lapply(dp_list$obs_graph_list[B_list],function(G) {
+    G = G[keep_trait_id,keep_trait_id];
+    G[,BW_id] = 0;
+    GG = G * t(G); diag(GG) = 0;
+    diag(G)=rowSums(GG);
+    G})
+  
+  new_dir_graph_list1 = vector(mode='list', length=length(new_obs_graph_list))
+  for(i in 1:length(new_obs_graph_list)){
+    G_obs = new_obs_graph_list[[i]]
+    iter = 0
+    G_dir = G_obs %*% solve(diag(nrow(G_obs))+G_obs);
+    G_dir0 = G_dir;
+    converge = 0;
+    while(any(abs(diag(G_dir)) > 1e-4) & iter < maxit){
+      G_dir = G_obs %*% solve(diag(nrow(G_obs))+G_obs);
+      GG = G_dir * t(G_obs); diag(GG) = 0;
+      diag(G_obs) = rowSums(GG);
+      iter = iter + 1;
     }
-
-    obs_graph_mean = apply(simplify2array(new_obs_graph_list), 1:2, mean)
-    obs_graph_sd = apply(simplify2array(new_obs_graph_list), 1:2, sd)
-    obs_graph_pval = pnorm(-abs(obs_graph_mean/obs_graph_sd))*2
-
-    pval_3dmat = simplify2array(dp_list$obs_graph_pval_list)
-    pval_3dmat = pval_3dmat[keep_trait_id,keep_trait_id,]
-    dims = dim(pval_3dmat)
-    twoDimMat <- matrix(pval_3dmat,prod(dims[1:2]), dims[3])
-    twoDimMat[!apply(twoDimMat,1,sum)==0,] -> twoDimMat
-    lambda = eigen(cor(t(twoDimMat)))$value
-    Me = ceiling(length(lambda) - sum((lambda>1)*(lambda-1)))
-
+    if(iter>=maxit){
+      G_dir = G_dir0
+      converge = 1 # Converge fail!
+    }
+    new_dir_graph_list1[[i]]$converge = converge
+    new_dir_graph_list1[[i]]$G_dir = G_dir
+  }
+  
+  
+  new_dir_graph_list = lapply(new_dir_graph_list1, function(x){x$G_dir})
+  new_dir_graph_conv_vec = unlist(lapply(new_dir_graph_list1, function(x){x$converge}))
+  conv_len = sum(new_dir_graph_conv_vec)
+  new_obs_pval_graph_list = dp_list$obs_graph_pval_list[B_list]
+  max_eigen_list = lapply(new_dir_graph_list, function(x) {max(abs(eigen(x)$values))})
+  rm_dp_id = which(unlist(max_eigen_list)>1)
+  warn_len = length(rm_dp_id)
+  if(check & warn_len>0){
+    if(warn_len==B & show){
+      new_obs_graph_list = new_obs_graph_list
+      new_dir_graph_list = new_dir_graph_list
+    }else if(warn_len==B & !show){
+      new_obs_graph_list = new_obs_graph_list
+      new_dir_graph_list = NULL
+      warning = TRUE
+    }else{
+    new_obs_graph_list = new_obs_graph_list[-rm_dp_id]
+    new_dir_graph_list = new_dir_graph_list[-rm_dp_id]
+    }
+  }
+  if(warn_len==0){warn_len=NULL}
+  obs_graph_mean = apply(simplify2array(new_obs_graph_list), 1:2, mean)
+  obs_graph_sd = apply(simplify2array(new_obs_graph_list), 1:2, sd)
+  obs_graph_pval = pnorm(-abs(obs_graph_mean/obs_graph_sd))*2
+  obs_graph_pval[which(obs_graph_pval==0)] = 5e-8
+  colnames(obs_graph_mean)=colnames(obs_graph_sd)=colnames(obs_graph_pval)=dp_list$trait_vec[keep_trait_id]
+  rownames(obs_graph_mean)=rownames(obs_graph_sd)=rownames(obs_graph_pval)=dp_list$trait_vec[keep_trait_id]
+  
+  pval_3dmat = simplify2array(new_obs_pval_graph_list)
+  pval_3dmat = pval_3dmat[keep_trait_id,keep_trait_id,]
+  dims = dim(pval_3dmat)
+  twoDimMat <- matrix(pval_3dmat,prod(dims[1:2]), dims[3])
+  twoDimMat[!apply(twoDimMat,1,sum)<1e-100,] -> twoDimMat
+  lambda = eigen(cor(t(twoDimMat)))$value
+  Me = ceiling(length(lambda) - sum((lambda>1)*(lambda-1)))
+  
+  if(!is.null(new_dir_graph_list)){
     dir_graph_mean = apply(simplify2array(new_dir_graph_list), 1:2, mean)
     dir_graph_sd = apply(simplify2array(new_dir_graph_list), 1:2, sd)
     dir_graph_pval = pnorm(-abs(dir_graph_mean/dir_graph_sd))*2
-
-    colnames(obs_graph_mean)=colnames(obs_graph_sd)=colnames(obs_graph_pval)=dp_list$trait_vec[keep_trait_id]
+    dir_graph_pval[which(dir_graph_pval==0)] = 5e-8
     colnames(dir_graph_mean)=colnames(dir_graph_sd)=colnames(dir_graph_pval)=dp_list$trait_vec[keep_trait_id]
-    rownames(obs_graph_mean)=rownames(obs_graph_sd)=rownames(obs_graph_pval)=dp_list$trait_vec[keep_trait_id]
     rownames(dir_graph_mean)=rownames(dir_graph_sd)=rownames(dir_graph_pval)=dp_list$trait_vec[keep_trait_id]
-
     eigen_dir = eigen(dir_graph_mean)
-    if(any(abs(eigen_dir$values)>1)){warning("Some eigenvalues' absolute values are greater than 1!")}
-    dp_list = list()
-    dp_list$obs_graph_list = new_obs_graph_list
-    dp_list$dir_graph_list = new_dir_graph_list
-    dp_res = list()
-    dp_res$obs_graph_mean = obs_graph_mean
-    dp_res$obs_graph_sd = obs_graph_sd
-    dp_res$obs_graph_pval = obs_graph_pval
-    dp_res$dir_graph_mean = dir_graph_mean
-    dp_res$dir_graph_sd = dir_graph_sd
-    dp_res$dir_graph_pval = dir_graph_pval
-    dp_res$Me = Me
-    return(list(dp_res=dp_res,dp_list=dp_list))
+    if(any(abs(eigen_dir$values)>1)){warning=TRUE}
+  }else{
+    dir_graph_mean = dir_graph_pval = dir_graph_sd = NULL
+  }
+  dp_list = list()
+  dp_list$obs_graph_list = new_obs_graph_list
+  dp_list$dir_graph_list = new_dir_graph_list
+  dp_res = list()
+  dp_res$obs_graph_mean = obs_graph_mean
+  dp_res$obs_graph_sd = obs_graph_sd
+  dp_res$obs_graph_pval = obs_graph_pval
+  dp_res$dir_graph_mean = dir_graph_mean
+  dp_res$dir_graph_sd = dir_graph_sd
+  dp_res$dir_graph_pval = dir_graph_pval
+  dp_res$Me = Me
+  return(list(dp_res=dp_res,dp_list=dp_list,warning=warning,warn_len=warn_len,conv_len=conv_len,total_B=total_B))
 }
+
 
 
 

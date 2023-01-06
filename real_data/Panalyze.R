@@ -4,8 +4,8 @@ library(dplyr)
 
 array_id = Sys.getenv('SLURM_ARRAY_TASK_ID')
 
-dat = get(load('/home/panwei/lin00374/cML/graph/AD+AF+11r4d/data/AD+AF+11r4d.RData'))
-IV_list = get(load('/home/panwei/lin00374/cML/graph/AD+AF+11r4d/data/AD+AF+11r4d_IV.RData'))
+dat = get(load('/home/panwei/lin00374/cML/graph/17trait/data/AD+AF+11r4d.RData'))
+IV_list = get(load('/home/panwei/lin00374/cML/graph/17trait/data/AD+AF+11r4d_IV.RData'))
 
 dp_list = Graph_Perturb(b_mat = dat$b_mat,
                         se_mat = dat$se_mat,

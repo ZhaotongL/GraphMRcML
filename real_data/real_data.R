@@ -8,8 +8,8 @@ source('/home/panwei/lin00374/TWAS_XSquare/Feb4_2021/allele_qc.R')
 # Height 25282103: ieu-a-89
 # BMI 25673413: ieu-a-835
 # BW 27680694: ieu-a-1083
-# DBP 30224653: ieu-b-39
-# SBP 30224653: ieu-b-38
+# DBP : ukb-a-359
+# SBP : ukb-a-360
 # FG 20081858: ebi-a-GCST000568
 # Smoke 30643251: ieu-b-25
 # Alcohol 30643251: ieu-b-73
@@ -22,8 +22,8 @@ source('/home/panwei/lin00374/TWAS_XSquare/Feb4_2021/allele_qc.R')
 
 TSMR.ID.Vec =
   c("ebi-a-GCST002216","ebi-a-GCST002222","ebi-a-GCST002223",
-    "ieu-a-89","ieu-a-835","ieu-a-1083","ieu-b-39",
-    "ieu-b-38","ebi-a-GCST000568","ieu-b-25","ieu-b-73","ebi-a-GCST005195",
+    "ieu-a-89","ieu-a-835","ieu-a-1083","ukb-a-359",
+    "ukb-a-360","ebi-a-GCST000568","ieu-b-25","ieu-b-73","ebi-a-GCST005195",
     "ebi-a-GCST005838","ieu-a-26","ebi-a-GCST006862","ebi-a-GCST006414","Jansen2019")
 
 
