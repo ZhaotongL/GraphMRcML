@@ -1,3 +1,4 @@
+source('MRcML-C.R')
 Graph_Screen <- function(b_mat,se_mat,n_vec,IV_list,R_list,rho_mat,c_vec=rep(1,length(n_vec)),sig.cutoff=5e-08){
   n_trait = length(n_vec)
   N_combination = n_trait * (n_trait - 1) / 2
