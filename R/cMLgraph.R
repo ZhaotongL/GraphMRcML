@@ -175,42 +175,6 @@ Graph_Perturb <- function(b_mat,se_mat,n_vec,rho_mat,IV_list,R_list,c_vec=rep(1,
   return(out)
 }
 
-Graph_summarize <- function(Graph_Perturb_list){
-    obs_graph_mean = apply(simplify2array(Graph_Perturb_list$obs_graph_list), 1:2, mean)
-    obs_graph_sd = apply(simplify2array(Graph_Perturb_list$obs_graph_list), 1:2, sd)
-    obs_graph_pval = pnorm(-abs(obs_graph_mean/obs_graph_sd))*2
-
-    pval_3dmat = simplify2array(Graph_Perturb_list$obs_graph_pval_list)
-    dims = dim(pval_3dmat)
-    twoDimMat <- matrix(pval_3dmat,prod(dims[1:2]), dims[3])
-    twoDimMat[!apply(twoDimMat,1,sum)<1e-100,] -> twoDimMat
-    lambda = eigen(cor(t(twoDimMat)))$value
-    Me = ceiling(length(lambda) - sum((lambda>1)*(lambda-1)))
-
-    dir_graph_mean = apply(simplify2array(Graph_Perturb_list$dir_graph_list), 1:2, mean)
-    dir_graph_sd = apply(simplify2array(Graph_Perturb_list$dir_graph_list), 1:2, sd)
-    dir_graph_pval = pnorm(-abs(dir_graph_mean/dir_graph_sd))*2
-
-    colnames(obs_graph_mean)=colnames(obs_graph_sd)=colnames(obs_graph_pval)=Graph_Perturb_list$trait_vec
-    colnames(dir_graph_mean)=colnames(dir_graph_sd)=colnames(dir_graph_pval)=Graph_Perturb_list$trait_vec
-    rownames(obs_graph_mean)=rownames(obs_graph_sd)=rownames(obs_graph_pval)=Graph_Perturb_list$trait_vec
-    rownames(dir_graph_mean)=rownames(dir_graph_sd)=rownames(dir_graph_pval)=Graph_Perturb_list$trait_vec
-
-    eigen_dir = eigen(dir_graph_mean)
-    if(any(abs(eigen_dir$values)>1)){warning("Some eigenvalues' absolute values are greater than 1!")}
-
-
-    out = list()
-    out$obs_graph_mean = obs_graph_mean
-    out$obs_graph_sd = obs_graph_sd
-    out$obs_graph_pval = obs_graph_pval
-    out$dir_graph_mean = dir_graph_mean
-    out$dir_graph_sd = dir_graph_sd
-    out$dir_graph_pval = dir_graph_pval
-    out$Me = Me
-
-    return(out)
-}
 
 
 
