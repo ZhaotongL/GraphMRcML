@@ -102,10 +102,7 @@ Graph_Estimate <- function(b_mat,se_mat,n_vec,rho_mat,IJ_snp_list,t,random_start
     for(j in (i+1):n_trait){
       ind_i_new = IJ_snp_list[[k]]$ind_i_new
       ind_j_new = IJ_snp_list[[k]]$ind_j_new
-### for perturbed data, need to select again! ### (NOT USE)
-#      ind_i_new = ind_i_new[abs(b_mat[ind_i_new,i]/se_mat[ind_i_new,i])>t]
-#      ind_j_new = ind_j_new[abs(b_mat[ind_j_new,j]/se_mat[ind_j_new,j])>t]
-###
+
       rho_ij = rho_mat[i,j]
       ItoJ_cML_O_res = mr_cML_O(b_exp=b_mat[ind_i_new,i],
                                  b_out=b_mat[ind_i_new,j],
@@ -133,8 +130,6 @@ Graph_Estimate <- function(b_mat,se_mat,n_vec,rho_mat,IJ_snp_list,t,random_start
     }
   }
   dir_graph = obs_graph %*% solve(diag(n_trait)+obs_graph)
-#  eigen_og = eigen(dir_graph)
-#  if(any(abs(eigen_og$values)>1)){warning("Some eigenvalues' absolute values are greater than 1!")}
 
   out = list()
   out$obs_graph = obs_graph
